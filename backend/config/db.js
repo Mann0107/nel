@@ -11,11 +11,13 @@ const connectDB = async () => {
     });
     console.log(`MongoDB Connected: ${conn.connection.host}`);
     
-    // Auto-seed if database is empty (e.g. fresh MongoDB Atlas cluster)
+    // Auto-seed if database is empty or has fewer than 20 products (updating catalog)
     const User = require('../models/User');
+    const Product = require('../models/Product');
     const userCount = await User.countDocuments();
-    if (userCount === 0) {
-      console.log('Atlas/Production database is empty. Auto-seeding default credentials and products...');
+    const productCount = await Product.countDocuments();
+    if (userCount === 0 || productCount < 20) {
+      console.log('Atlas/Production database needs updates. Auto-seeding default credentials and products...');
       const seedData = require('../utils/seeder');
       await seedData(false);
       console.log('Auto-seeding complete.');
