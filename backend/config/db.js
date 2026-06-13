@@ -1,5 +1,4 @@
 const mongoose = require('mongoose');
-const { MongoMemoryServer } = require('mongodb-memory-server');
 
 let mongod = null;
 
@@ -30,6 +29,8 @@ const connectDB = async () => {
     
     try {
       // Create In-Memory MongoDB Instance
+      // Create In-Memory MongoDB Instance dynamically
+      const { MongoMemoryServer } = require('mongodb-memory-server');
       mongod = await MongoMemoryServer.create();
       const uri = mongod.getUri();
       
