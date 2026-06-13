@@ -3,8 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Download, ShieldCheck, Truck, Calendar, FileText } from 'lucide-react';
-import { api } from '../../utils/api';
-import TrackingProgressBar from '../../components/TrackingProgressBar';
+import { api } from '../../../utils/api';
+import TrackingProgressBar from '../../../components/TrackingProgressBar';
 
 export default function OrderTracking({ params }) {
   const orderId = params.id;

@@ -10,7 +10,7 @@ const CATEGORIES = ['All', 'Saree', 'Kurti', 'Salwar Suit', 'Lehenga', 'Western 
 const SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
 const RATINGS = [4, 3, 2, 1];
 
-export default function Shop() {
+function ShopContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -320,5 +320,17 @@ export default function Shop() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function Shop() {
+  return (
+    <React.Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-white">
+        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-teal-600"></div>
+      </div>
+    }>
+      <ShopContent />
+    </React.Suspense>
   );
 }

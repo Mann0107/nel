@@ -9,7 +9,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import { api } from '../../utils/api';
 
-export default function Dashboard() {
+function DashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, updateProfile, changeUserPassword } = useAuth();
@@ -679,5 +679,17 @@ export default function Dashboard() {
 
       </div>
     </div>
+  );
+}
+
+export default function Dashboard() {
+  return (
+    <React.Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-white">
+        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-teal-600"></div>
+      </div>
+    }>
+      <DashboardContent />
+    </React.Suspense>
   );
 }
