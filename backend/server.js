@@ -25,6 +25,16 @@ connectDB();
 
 const app = express();
 
+// Middleware to ensure database is connected before processing requests
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
+
 // Configure CORS
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:3000',
