@@ -1,7 +1,7 @@
 const getBaseUrl = () => {
   if (typeof window !== 'undefined') {
     if (window.location.hostname !== 'localhost') {
-      return '/api';
+      return '/_/backend/api';
     }
   }
   return 'http://localhost:5001/api';
