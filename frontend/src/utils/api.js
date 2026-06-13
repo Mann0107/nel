@@ -72,6 +72,29 @@ export const api = {
       throw new Error(error.message || 'Network error');
     }
   },
+
+  async upload(endpoint, formData) {
+    try {
+      const headers = {};
+      if (typeof window !== 'undefined') {
+        const userInfo = localStorage.getItem('userInfo');
+        if (userInfo) {
+          const { token } = JSON.parse(userInfo);
+          if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+          }
+        }
+      }
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        method: 'POST',
+        headers,
+        body: formData,
+      });
+      return await handleResponse(response);
+    } catch (error) {
+      throw new Error(error.message || 'Network error');
+    }
+  },
 };
 
 const handleResponse = async (response) => {

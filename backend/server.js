@@ -11,6 +11,8 @@ const wishlistRoutes = require('./routes/wishlistRoutes');
 const pincodeRoutes = require('./routes/pincodeRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const uploadRoutes = require('./routes/uploadRoutes');
+const path = require('path');
 
 // Middleware imports
 const { notFound, errorHandler } = require('./middleware/errorMiddleware');
@@ -40,6 +42,10 @@ app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/pincodes', pincodeRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/upload', uploadRoutes);
+
+// Serve uploads folder statically
+app.use('/uploads', express.static(path.join(__dirname, '/uploads')));
 
 // Root route
 app.get('/', (req, res) => {

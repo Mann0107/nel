@@ -32,6 +32,7 @@ export default function AdminDashboard() {
   const [prodStock, setProdStock] = useState('');
   const [prodSizes, setProdSizes] = useState(['M', 'L', 'XL']);
   const [prodImages, setProdImages] = useState('');
+  const [uploading, setUploading] = useState(false);
   
   // Specs form fields
   const [specFabric, setSpecFabric] = useState('');
@@ -122,6 +123,32 @@ export default function AdminDashboard() {
       setCustomers(data);
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('image', file);
+
+    setUploading(true);
+    try {
+      const data = await api.upload('/upload', formData);
+      setProdImages((prev) => {
+        const url = data.url;
+        const trimmed = prev.trim();
+        if (!trimmed) return url;
+        if (trimmed.endsWith(',')) {
+          return `${trimmed} ${url}`;
+        }
+        return `${trimmed}, ${url}`;
+      });
+    } catch (err) {
+      alert(err.message || 'Image upload failed');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -888,13 +915,31 @@ export default function AdminDashboard() {
                 </div>
 
                 <div className="sm:col-span-2">
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Product Images (URLs separated by comma)</label>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase">Product Images (URLs separated by comma)</label>
+                    <label className="text-[10px] text-teal-650 dark:text-teal-400 font-bold hover:underline cursor-pointer flex items-center gap-1">
+                      {uploading ? (
+                        <span className="animate-pulse">Uploading...</span>
+                      ) : (
+                        <>
+                          <Plus size={12} /> Upload from device
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageUpload}
+                            className="hidden"
+                            disabled={uploading}
+                          />
+                        </>
+                      )}
+                    </label>
+                  </div>
                   <input
                     type="text"
                     required
                     value={prodImages}
                     onChange={(e) => setProdImages(e.target.value)}
-                    placeholder="https://image1.jpg, https://image2.jpg"
+                    placeholder="/uploads/image-1.jpg, https://example.com/image-2.jpg"
                     className="w-full bg-slate-50 dark:bg-slate-900 border text-sm py-2 px-3 rounded-lg focus:ring-1 focus:ring-brand-teal"
                   />
                 </div>
