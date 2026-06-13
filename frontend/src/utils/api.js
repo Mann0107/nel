@@ -1,4 +1,13 @@
-const API_BASE_URL = 'http://localhost:5001/api';
+const getBaseUrl = () => {
+  if (typeof window !== 'undefined') {
+    if (window.location.hostname !== 'localhost') {
+      return '/api';
+    }
+  }
+  return 'http://localhost:5001/api';
+};
+
+const API_BASE_URL = getBaseUrl();
 
 const getHeaders = () => {
   const headers = {
