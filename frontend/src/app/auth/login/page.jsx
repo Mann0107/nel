@@ -7,7 +7,7 @@ import { Eye, EyeOff, Lock, User, AlertCircle, Sparkles } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import { api } from '../../../utils/api';
 
-export default function Login() {
+function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, login, loading: authLoading } = useAuth();
@@ -334,5 +334,17 @@ export default function Login() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function Login() {
+  return (
+    <React.Suspense fallback={
+      <div className="min-h-[75vh] flex items-center justify-center bg-slate-50 dark:bg-slate-900">
+        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-brand-teal"></div>
+      </div>
+    }>
+      <LoginContent />
+    </React.Suspense>
   );
 }

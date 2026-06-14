@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Eye, EyeOff, Lock, User, Mail, Phone, AlertCircle, Sparkles } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 
-export default function Register() {
+function RegisterContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, register, loading: authLoading } = useAuth();
@@ -239,5 +239,17 @@ export default function Register() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function Register() {
+  return (
+    <React.Suspense fallback={
+      <div className="min-h-[80vh] flex items-center justify-center bg-slate-50 dark:bg-slate-900">
+        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-brand-teal"></div>
+      </div>
+    }>
+      <RegisterContent />
+    </React.Suspense>
   );
 }
