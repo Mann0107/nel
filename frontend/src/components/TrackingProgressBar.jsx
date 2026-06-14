@@ -15,6 +15,20 @@ const STAGES = [
 ];
 
 export default function TrackingProgressBar({ currentStatus }) {
+  if (currentStatus === 'Cancelled') {
+    return (
+      <div className="w-full p-5 border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/20 text-red-650 dark:text-red-400 rounded-2xl flex items-center space-x-3 shadow-sm">
+        <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/40 flex items-center justify-center text-red-650 dark:text-red-400 flex-shrink-0">
+          <CheckCircle2 size={20} />
+        </div>
+        <div>
+          <h4 className="font-bold text-sm">Order Cancelled</h4>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">This order has been cancelled by the administrator.</p>
+        </div>
+      </div>
+    );
+  }
+
   const currentIndex = STAGES.findIndex((stage) => stage.status === currentStatus);
 
   return (

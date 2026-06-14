@@ -6,13 +6,15 @@ import { Search, SlidersHorizontal, Star, RotateCcw, ChevronLeft, ChevronRight }
 import ProductCard from '../../components/ProductCard';
 import { api } from '../../utils/api';
 
-const CATEGORIES = ['All', 'Saree', 'Kurti', 'Salwar Suit', 'Lehenga', 'Western Dress', 'Party Wear', 'Men\'s Wear', 'Kids Wear'];
 const SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
 const RATINGS = [4, 3, 2, 1];
 
 function ShopContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  // Categories state
+  const [categoriesList, setCategoriesList] = useState(['All', 'Saree', 'Kurti', 'Salwar Suit', 'Lehenga', 'Western Dress', 'Party Wear', 'Men\'s Wear', 'Kids Wear']);
 
   // Search/Filter states
   const [keyword, setKeyword] = useState(searchParams.get('keyword') || '');
@@ -29,6 +31,21 @@ function ShopContent() {
   const [count, setCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Load shop categories on mount
+  useEffect(() => {
+    async function loadShopCategories() {
+      try {
+        const catData = await api.get('/products/categories');
+        if (catData && catData.length > 0) {
+          setCategoriesList(['All', ...catData.map((c) => c.name)]);
+        }
+      } catch (err) {
+        console.error('Failed to load shop categories', err);
+      }
+    }
+    loadShopCategories();
+  }, []);
 
   // Sync state with url params if they change
   useEffect(() => {
@@ -150,14 +167,14 @@ function ShopContent() {
           <div>
             <h4 className="font-semibold text-xs text-slate-400 uppercase tracking-widest mb-3">Categories</h4>
             <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-              {CATEGORIES.map((cat) => (
+              {categoriesList.map((cat) => (
                 <button
                   key={cat}
                   onClick={() => { setCategory(cat); setPage(1); }}
                   className={`block w-full text-left text-sm py-1 transition-colors ${
                     category === cat
                       ? 'text-brand-teal font-semibold'
-                      : 'text-slate-600 dark:text-slate-300 hover:text-brand-teal'
+                      : 'text-slate-600 dark:text-slate-350 hover:text-brand-teal'
                   }`}
                 >
                   {cat}

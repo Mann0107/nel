@@ -12,9 +12,13 @@ export const AuthProvider = ({ children }) => {
 
   // Sync auth state on mount
   useEffect(() => {
-    const userInfo = localStorage.getItem('userInfo');
-    if (userInfo) {
-      setUser(JSON.parse(userInfo));
+    const isAdminPath = typeof window !== 'undefined' && window.location.pathname.startsWith('/admin');
+    let storedInfo = localStorage.getItem(isAdminPath ? 'adminInfo' : 'userInfo');
+    if (!storedInfo) {
+      storedInfo = localStorage.getItem(isAdminPath ? 'userInfo' : 'adminInfo');
+    }
+    if (storedInfo) {
+      setUser(JSON.parse(storedInfo));
     }
     setLoading(false);
   }, []);
@@ -25,7 +29,11 @@ export const AuthProvider = ({ children }) => {
     try {
       const data = await api.post('/auth/login', { loginId, password });
       setUser(data);
-      localStorage.setItem('userInfo', JSON.stringify(data));
+      if (data.role === 'admin') {
+        localStorage.setItem('adminInfo', JSON.stringify(data));
+      } else {
+        localStorage.setItem('userInfo', JSON.stringify(data));
+      }
       setLoading(false);
       return data;
     } catch (err) {
@@ -59,7 +67,8 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('userInfo');
+    const isAdminPath = typeof window !== 'undefined' && window.location.pathname.startsWith('/admin');
+    localStorage.removeItem(isAdminPath ? 'adminInfo' : 'userInfo');
   };
 
   const updateProfile = async (profileData) => {
@@ -68,7 +77,8 @@ export const AuthProvider = ({ children }) => {
     try {
       const data = await api.put('/auth/profile', profileData);
       setUser(data);
-      localStorage.setItem('userInfo', JSON.stringify(data));
+      const isAdminPath = typeof window !== 'undefined' && window.location.pathname.startsWith('/admin');
+      localStorage.setItem(isAdminPath ? 'adminInfo' : 'userInfo', JSON.stringify(data));
       setLoading(false);
       return data;
     } catch (err) {

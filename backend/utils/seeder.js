@@ -96,7 +96,7 @@ const seedData = async (shouldCloseConnection = true) => {
       {
         name: 'Royal Banarasi Silk Saree',
         code: 'SAREE-BANARASI-01',
-        brand: 'Varanasi Weaves',
+        brand: 'Khodal Saree',
         category: 'Saree',
         originalPrice: 4999,
         discountPercentage: 20,
@@ -304,7 +304,7 @@ const seedData = async (shouldCloseConnection = true) => {
       {
         name: 'Kanjeevaram Kora Silk Saree',
         code: 'SAREE-KANJEEVARAM-09',
-        brand: 'Kanchi Weavers',
+        brand: 'Khodal Saree',
         category: 'Saree',
         originalPrice: 6999,
         discountPercentage: 15,
@@ -356,7 +356,7 @@ const seedData = async (shouldCloseConnection = true) => {
       {
         name: 'Premium Banarasi Silk Saree',
         code: 'SAREE-BANARASI-11',
-        brand: 'Varanasi Weaves',
+        brand: 'Khodal Saree',
         category: 'Saree',
         originalPrice: 5499,
         discountPercentage: 10,
@@ -564,7 +564,7 @@ const seedData = async (shouldCloseConnection = true) => {
       {
         name: 'Royal Kanjeevaram Kora Silk Saree',
         code: 'SAREE-KANJEEVARAM-19',
-        brand: 'Kanchi Weavers',
+        brand: 'Khodal Saree',
         category: 'Saree',
         originalPrice: 7499,
         discountPercentage: 10,

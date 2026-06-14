@@ -41,10 +41,10 @@ export default function Footer() {
         <div className="space-y-4">
           <Link href="/" className="flex items-center space-x-2">
             <span className="text-2xl font-bold font-serif text-white">
-              Neel
+              Khodal
             </span>
             <span className="text-xs uppercase bg-brand-gold text-brand-teal-dark px-1.5 py-0.5 rounded font-bold tracking-wider font-sans">
-              India
+              Saree
             </span>
           </Link>
           <p className="text-sm text-slate-400">
@@ -84,11 +84,11 @@ export default function Footer() {
           </div>
           <div className="flex items-center space-x-3 text-sm text-slate-400">
             <Mail size={16} className="text-brand-teal-light" />
-            <span>support@neel.in</span>
+            <span>support@khodalsaree.com</span>
           </div>
           <div className="flex items-start space-x-3 text-sm text-slate-400">
             <MapPin size={16} className="text-brand-gold mt-1" />
-            <span>Neel Tower, Phase 2, Bandra Kurla Complex, Mumbai, MH - 400051</span>
+            <span>Khodal Tower, Phase 2, Bandra Kurla Complex, Mumbai, MH - 400051</span>
           </div>
         </div>
       </div>
@@ -96,7 +96,7 @@ export default function Footer() {
       {/* Copyright bar */}
       <div className="bg-slate-950 py-6 text-center text-xs text-slate-500 border-t border-slate-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-          <p>© {new Date().getFullYear()} Neel India. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} Khodal Saree. All rights reserved.</p>
           <div className="flex space-x-4">
             <span className="bg-slate-900 px-2 py-1 rounded border border-slate-800 text-[10px] text-slate-400">BHIM UPI</span>
             <span className="bg-slate-900 px-2 py-1 rounded border border-slate-800 text-[10px] text-slate-400">GPay</span>

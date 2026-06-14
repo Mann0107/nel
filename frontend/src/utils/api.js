@@ -1,8 +1,16 @@
 const getBaseUrl = () => {
   if (typeof window !== 'undefined') {
-    if (window.location.hostname !== 'localhost') {
-      return '/_/backend/api';
+    const hostname = window.location.hostname;
+    if (
+      hostname === 'localhost' ||
+      hostname.includes('192.168.') ||
+      hostname.includes('10.') ||
+      hostname.includes('172.') ||
+      /^[0-9.]+$/.test(hostname)
+    ) {
+      return `http://${hostname}:5001/api`;
     }
+    return '/_/backend/api';
   }
   return 'http://localhost:5001/api';
 };
@@ -15,9 +23,13 @@ const getHeaders = () => {
   };
   
   if (typeof window !== 'undefined') {
-    const userInfo = localStorage.getItem('userInfo');
-    if (userInfo) {
-      const { token } = JSON.parse(userInfo);
+    const isAdminPath = window.location.pathname.startsWith('/admin');
+    let storedInfo = localStorage.getItem(isAdminPath ? 'adminInfo' : 'userInfo');
+    if (!storedInfo) {
+      storedInfo = localStorage.getItem(isAdminPath ? 'userInfo' : 'adminInfo');
+    }
+    if (storedInfo) {
+      const { token } = JSON.parse(storedInfo);
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
@@ -86,9 +98,13 @@ export const api = {
     try {
       const headers = {};
       if (typeof window !== 'undefined') {
-        const userInfo = localStorage.getItem('userInfo');
-        if (userInfo) {
-          const { token } = JSON.parse(userInfo);
+        const isAdminPath = window.location.pathname.startsWith('/admin');
+        let storedInfo = localStorage.getItem(isAdminPath ? 'adminInfo' : 'userInfo');
+        if (!storedInfo) {
+          storedInfo = localStorage.getItem(isAdminPath ? 'userInfo' : 'adminInfo');
+        }
+        if (storedInfo) {
+          const { token } = JSON.parse(storedInfo);
           if (token) {
             headers['Authorization'] = `Bearer ${token}`;
           }
@@ -115,7 +131,8 @@ const handleResponse = async (response) => {
     
     // Automatically log out if token is expired/invalid
     if (response.status === 401 && typeof window !== 'undefined') {
-      localStorage.removeItem('userInfo');
+      const isAdminPath = window.location.pathname.startsWith('/admin');
+      localStorage.removeItem(isAdminPath ? 'adminInfo' : 'userInfo');
     }
     
     throw new Error(errorMsg);

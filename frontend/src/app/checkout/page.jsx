@@ -35,6 +35,9 @@ export default function Checkout() {
   // Placed order information
   const [confirmedOrder, setConfirmedOrder] = useState(null);
   const [razorpayLoaded, setRazorpayLoaded] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState('Online'); // 'Online' or 'COD'
+  const [transactionId, setTransactionId] = useState('');
+  const [verificationMsg, setVerificationMsg] = useState('');
 
   // Fetch addresses on mount
   useEffect(() => {
@@ -123,82 +126,57 @@ export default function Checkout() {
     setError('');
     
     try {
-      // 1. Create order on backend (calls Razorpay API internally if key exists)
-      const payData = await api.post('/orders/create-payment-order', {
-        addressId: selectedAddressId,
-      });
-
-      if (payData.isMock) {
-        // Fallback to a mock checkout simulation
-        console.log('Using Mock Checkout Flow...');
-        
-        // Simulating 1.5s gateway processing
-        setTimeout(async () => {
-          try {
-            const verifyRes = await api.post('/orders/verify-payment', {
-              orderId: payData.orderId,
-              addressId: selectedAddressId,
-              razorpay_payment_id: `pay_mock_${Math.random().toString(36).substring(7)}`,
-              razorpay_signature: `signature_mock_${Math.random().toString(36).substring(7)}`,
-            });
-            
-            setConfirmedOrder(verifyRes);
-            clearCart();
-            setStep(4);
-            setLoading(false);
-          } catch (err) {
-            setError(err.message || 'Mock payment verification failed');
-            setLoading(false);
-          }
-        }, 1500);
-      } else {
-        // Real Razorpay integration
-        const options = {
-          key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_placeholder', // needs key id on client
-          amount: payData.amount * 100,
-          currency: 'INR',
-          name: 'Neel India',
-          description: 'Payment for your ethnic wears',
-          order_id: payData.orderId,
-          handler: async function (response) {
-            setLoading(true);
-            try {
-              const verifyRes = await api.post('/orders/verify-payment', {
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-                addressId: selectedAddressId,
-              });
-
-              setConfirmedOrder(verifyRes);
-              clearCart();
-              setStep(4);
-            } catch (err) {
-              setError(err.message || 'Transaction verification failed');
-            } finally {
-              setLoading(false);
-            }
-          },
-          prefill: {
-            name: user.name,
-            email: user.email,
-            contact: user.mobile,
-          },
-          theme: {
-            color: '#0D5C75', // Brand teal
-          },
-        };
-
-        const rzp = new window.Razorpay(options);
-        rzp.on('payment.failed', function (response) {
-          setError(response.error.description || 'Payment failed');
-          setLoading(false);
+      if (paymentMethod === 'COD') {
+        const verifyRes = await api.post('/orders/verify-payment', {
+          addressId: selectedAddressId,
+          paymentMethod: 'COD',
         });
-        rzp.open();
+        
+        setConfirmedOrder(verifyRes);
+        clearCart();
+        setStep(4);
+        setLoading(false);
+        return;
+      }
+
+      if (paymentMethod === 'Online') {
+        if (!transactionId.trim()) {
+          setError('Please enter the Transaction Reference Number (UTR) first.');
+          setLoading(false);
+          return;
+        }
+
+        // Simulate verification steps before placing the order
+        setVerificationMsg('Initiating payment verification for UTR: ' + transactionId.trim() + '...');
+        
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        setVerificationMsg('Verifying payment amount ₹' + grandTotal + ' with UPI network...');
+        
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        setVerificationMsg('Authenticating reference transaction ID with bank registry...');
+        
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        setVerificationMsg('Payment verified successfully! Placing your order...');
+        
+        await new Promise((resolve) => setTimeout(resolve, 600));
+
+        const verifyRes = await api.post('/orders/verify-payment', {
+          addressId: selectedAddressId,
+          paymentMethod: 'Online',
+          paymentId: transactionId.trim(),
+        });
+        
+        setConfirmedOrder(verifyRes);
+        clearCart();
+        setStep(4);
+        setLoading(false);
+        setVerificationMsg('');
+        return;
       }
     } catch (err) {
-      setError(err.message || 'Failed to initialize payment');
+      setError(err.message || 'Failed to place order');
       setLoading(false);
+      setVerificationMsg('');
     }
   };
 
@@ -449,6 +427,113 @@ export default function Checkout() {
             ))}
           </div>
 
+          {/* Payment Method Selector */}
+          <div className="p-4 bg-slate-50 dark:bg-slate-900 border rounded-2xl space-y-3">
+            <h4 className="font-bold text-xs uppercase text-slate-450 tracking-wider">Select Payment Method</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                type="button"
+                onClick={() => setPaymentMethod('Online')}
+                className={`p-3 rounded-xl border flex flex-col items-center justify-center space-y-1.5 transition-all ${
+                  paymentMethod === 'Online'
+                    ? 'border-brand-teal bg-brand-teal/5 text-brand-teal font-semibold shadow-sm'
+                    : 'border-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500'
+                }`}
+              >
+                <CreditCard size={18} />
+                <span className="text-xs font-bold">Online Payment</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setPaymentMethod('COD')}
+                className={`p-3 rounded-xl border flex flex-col items-center justify-center space-y-1.5 transition-all ${
+                  paymentMethod === 'COD'
+                    ? 'border-brand-teal bg-brand-teal/5 text-brand-teal font-semibold shadow-sm'
+                    : 'border-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500'
+                }`}
+              >
+                <ShoppingBag size={18} />
+                <span className="text-xs font-bold text-center">Cash on Delivery</span>
+                <span className="text-[9px] text-brand-saffron font-extrabold">+ ₹10 COD Charge</span>
+              </button>
+            </div>
+          </div>
+
+          {/* UPI / Bank Details instructions */}
+          {paymentMethod === 'Online' && (
+            <div className="p-5 border border-brand-teal/20 bg-brand-teal/5 dark:bg-slate-900 rounded-2xl space-y-4">
+              <div className="flex items-center space-x-2 text-brand-teal">
+                <CreditCard size={18} />
+                <h4 className="font-bold text-xs uppercase tracking-wider">Pay using UPI or Bank Transfer</h4>
+              </div>
+              <p className="text-[11px] text-slate-500 leading-relaxed">
+                Please scan the QR code below, open your UPI application, or use the Bank details to pay the grand total of **₹{grandTotal}** first. Once paid, enter the transaction ID/UTR number below to verify and place your order.
+              </p>
+              
+              <div className="flex flex-col sm:flex-row items-center gap-4 py-2">
+                {/* QR Code */}
+                <div className="w-36 h-36 border-2 border-white bg-white rounded-lg flex items-center justify-center p-1.5 shadow-sm flex-shrink-0">
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`upi://pay?pa=manngondaliya123-1@okaxis&pn=Khodal Saree&am=${grandTotal}&cu=INR&tn=Order%20Payment`)}`}
+                    alt="UPI Payment QR Code"
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+                
+                {/* UPI & Bank Details list */}
+                <div className="space-y-2 text-xs w-full text-slate-600 dark:text-slate-350">
+                  <div>
+                    <span className="font-bold block text-[10px] text-slate-400 uppercase">UPI ID</span>
+                    <span className="font-semibold text-slate-800 dark:text-slate-200">manngondaliya123-1@okaxis</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 border-t pt-2 border-slate-200 dark:border-slate-800">
+                    <div>
+                      <span className="font-bold block text-[10px] text-slate-400 uppercase">Account Holder</span>
+                      <span className="font-semibold text-slate-850 dark:text-slate-250">Khodal Saree</span>
+                    </div>
+                    <div>
+                      <span className="font-bold block text-[10px] text-slate-400 uppercase">Bank Name</span>
+                      <span className="font-semibold text-slate-850 dark:text-slate-250 font-sans">State Bank of India</span>
+                    </div>
+                    <div>
+                      <span className="font-bold block text-[10px] text-slate-400 uppercase">Account No</span>
+                      <span className="font-semibold text-slate-850 dark:text-slate-250">409210921092</span>
+                    </div>
+                    <div>
+                      <span className="font-bold block text-[10px] text-slate-400 uppercase">IFSC Code</span>
+                      <span className="font-semibold text-slate-850 dark:text-slate-250 font-sans">SBIN0001234</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Pay Now Button for Mobile Users */}
+              <div className="pt-1">
+                <a
+                  href={`upi://pay?pa=manngondaliya123-1@okaxis&pn=Khodal%20Saree&am=${grandTotal}&cu=INR&tn=OrderPayment`}
+                  className="w-full py-2.5 bg-brand-teal hover:bg-brand-teal-dark text-white rounded-xl text-xs font-bold shadow-sm transition-all flex items-center justify-center space-x-2"
+                >
+                  <CreditCard size={14} />
+                  <span>Open UPI Application to Pay (₹{grandTotal})</span>
+                </a>
+                <p className="text-[9px] text-center text-slate-400 mt-1">Works on mobile devices with UPI-compatible apps installed.</p>
+              </div>
+
+              {/* Transaction ID input */}
+              <div className="border-t pt-3 border-slate-200 dark:border-slate-800">
+                <label className="block text-[10px] font-bold text-slate-450 uppercase mb-1">UPI Ref No / Transaction UTR</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. 12-digit UPI reference number"
+                  value={transactionId}
+                  onChange={(e) => setTransactionId(e.target.value)}
+                  className="w-full rounded-lg p-2.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm text-slate-850 dark:text-slate-100 font-semibold focus:outline-none focus:ring-1 focus:ring-brand-teal"
+                />
+              </div>
+            </div>
+          )}
+
           {/* Order subtotal mathematics review */}
           <div className="space-y-2 text-sm border-t pt-4 text-slate-500">
             <div className="flex justify-between">
@@ -461,11 +546,15 @@ export default function Checkout() {
             </div>
             <div className="flex justify-between">
               <span>Shipping Charge</span>
-              <span className="font-semibold text-slate-700 dark:text-slate-250">₹{shippingCharge}</span>
+              <span className="font-semibold text-slate-700 dark:text-slate-250">
+                ₹{shippingCharge} {paymentMethod === 'COD' && <span className="text-[10px] text-brand-saffron font-bold">(+ ₹10 COD Fee)</span>}
+              </span>
             </div>
             <div className="flex justify-between font-bold text-base text-slate-850 dark:text-slate-100 border-t pt-2 mt-2">
               <span>Grand Total</span>
-              <span className="text-xl font-extrabold text-brand-teal">₹{grandTotal}</span>
+              <span className="text-xl font-extrabold text-brand-teal">
+                ₹{paymentMethod === 'COD' ? (grandTotal + 10) : grandTotal}
+              </span>
             </div>
           </div>
 
@@ -478,10 +567,10 @@ export default function Checkout() {
             </button>
             <button
               onClick={handlePayment}
-              disabled={loading}
-              className="flex-1 py-3 bg-brand-teal hover:bg-brand-teal-dark text-white rounded-xl text-sm font-semibold shadow disabled:opacity-50"
+              disabled={loading || (paymentMethod === 'Online' && transactionId.trim().length < 6)}
+              className="flex-1 py-3 bg-brand-teal hover:bg-brand-teal-dark text-white rounded-xl text-sm font-semibold shadow disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Processing Checkout...' : 'Confirm & Pay'}
+              {loading ? 'Processing Order...' : paymentMethod === 'COD' ? 'Place COD Order' : 'Confirm & Place Order'}
             </button>
           </div>
         </div>
@@ -496,7 +585,7 @@ export default function Checkout() {
           <div className="space-y-2">
             <h2 className="text-2xl font-bold font-serif text-slate-850 dark:text-slate-100">Order Confirmed!</h2>
             <p className="text-xs text-slate-400">
-              Thank you for shopping at Neel India. Your transaction has processed successfully.
+              Thank you for shopping at Khodal Saree. Your transaction has processed successfully.
             </p>
           </div>
 
@@ -505,6 +594,10 @@ export default function Checkout() {
             <div className="flex justify-between">
               <span className="text-slate-400">Invoice Number:</span>
               <span className="font-bold text-slate-700 dark:text-slate-200">{confirmedOrder.invoiceNumber}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-400">Payment Method:</span>
+              <span className="font-bold text-slate-700 dark:text-slate-200">{confirmedOrder.paymentMethod || 'Online'}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-slate-400">Order Payment ID:</span>

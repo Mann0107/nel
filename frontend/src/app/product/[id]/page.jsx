@@ -2,10 +2,12 @@
 
 import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { Star, Truck, Shield, RefreshCcw, ShoppingBag, Heart, ArrowRight } from 'lucide-react';
+import { Star, Truck, Shield, RefreshCcw, ShoppingBag, Heart, ArrowRight, ArrowLeft, ZoomIn, ZoomOut, Maximize2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { api } from '../../../utils/api';
 import { useCart } from '../../../context/CartContext';
 import { useAuth } from '../../../context/AuthContext';
+import Link from 'next/link';
+import ProductCard from '../../../components/ProductCard';
 
 export default function ProductDetails({ params }) {
   const productId = params.id;
@@ -18,6 +20,7 @@ export default function ProductDetails({ params }) {
   const [selectedSize, setSelectedSize] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [adding, setAdding] = useState(false);
+  const [relatedProducts, setRelatedProducts] = useState([]);
   
   // Pincode state
   const [pincode, setPincode] = useState('');
@@ -34,6 +37,98 @@ export default function ProductDetails({ params }) {
   const [zoomOrigin, setZoomOrigin] = useState('center');
   const [isZoomed, setIsZoomed] = useState(false);
 
+  // Lightbox states
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const [lightboxZoom, setLightboxZoom] = useState(1);
+  const [lightboxPan, setLightboxPan] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+
+  const handleLightboxMouseDown = (e) => {
+    if (lightboxZoom > 1) {
+      e.preventDefault();
+      setIsDragging(true);
+      setDragStart({
+        x: e.clientX - lightboxPan.x,
+        y: e.clientY - lightboxPan.y
+      });
+    }
+  };
+
+  const handleLightboxMouseMove = (e) => {
+    if (isDragging && lightboxZoom > 1) {
+      setLightboxPan({
+        x: e.clientX - dragStart.x,
+        y: e.clientY - dragStart.y
+      });
+    }
+  };
+
+  const handleLightboxMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const zoomIn = () => {
+    setLightboxZoom(z => Math.min(4, z + 0.5));
+  };
+
+  const zoomOut = () => {
+    setLightboxZoom(z => {
+      const nextZoom = Math.max(1, z - 0.5);
+      if (nextZoom === 1) {
+        setLightboxPan({ x: 0, y: 0 });
+      }
+      return nextZoom;
+    });
+  };
+
+  const resetZoom = () => {
+    setLightboxZoom(1);
+    setLightboxPan({ x: 0, y: 0 });
+  };
+
+  const handleImageDoubleClick = () => {
+    if (lightboxZoom > 1) {
+      resetZoom();
+    } else {
+      setLightboxZoom(2);
+    }
+  };
+
+  const handlePrevImage = () => {
+    if (!product || !product.images) return;
+    const idx = product.images.indexOf(activeImage);
+    if (idx > 0) {
+      setActiveImage(product.images[idx - 1]);
+      resetZoom();
+    }
+  };
+
+  const handleNextImage = () => {
+    if (!product || !product.images) return;
+    const idx = product.images.indexOf(activeImage);
+    if (idx < product.images.length - 1) {
+      setActiveImage(product.images[idx + 1]);
+      resetZoom();
+    }
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (!isLightboxOpen) return;
+      if (e.key === 'Escape') {
+        setIsLightboxOpen(false);
+        resetZoom();
+      } else if (e.key === 'ArrowLeft') {
+        handlePrevImage();
+      } else if (e.key === 'ArrowRight') {
+        handleNextImage();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isLightboxOpen, activeImage, product]);
+
   const isWishlisted = wishlist.products?.some((p) => p._id === productId || p === productId);
 
   useEffect(() => {
@@ -47,6 +142,17 @@ export default function ProductDetails({ params }) {
         if (data.sizes && data.sizes.length > 0) {
           setSelectedSize(data.sizes[0]);
         }
+        
+        // Fetch related products of the same category
+        if (data.category) {
+          const categoryData = await api.get(`/products?category=${encodeURIComponent(data.category)}`);
+          if (categoryData && categoryData.products) {
+            const filtered = categoryData.products
+              .filter((p) => p._id !== data._id)
+              .slice(0, 4);
+            setRelatedProducts(filtered);
+          }
+        }
       } catch (err) {
         console.error(err);
       } finally {
@@ -56,11 +162,20 @@ export default function ProductDetails({ params }) {
     loadProduct();
   }, [productId]);
 
+  const [lensPos, setLensPos] = useState({ x: 0, y: 0, bgPos: '0% 0%' });
+  const [showLens, setShowLens] = useState(false);
+
   const handleZoomMove = (e) => {
     const { left, top, width, height } = e.currentTarget.getBoundingClientRect();
-    const x = ((e.clientX - left) / width) * 100;
-    const y = ((e.clientY - top) / height) * 100;
-    setZoomOrigin(`${x}% ${y}%`);
+    const x = e.clientX - left;
+    const y = e.clientY - top;
+    const xPercent = (x / width) * 100;
+    const yPercent = (y / height) * 100;
+    setLensPos({
+      x,
+      y,
+      bgPos: `${xPercent}% ${yPercent}%`
+    });
   };
 
   const handlePincodeCheck = async (e) => {
@@ -82,10 +197,6 @@ export default function ProductDetails({ params }) {
   };
 
   const handleAddToCart = async () => {
-    if (!user) {
-      alert('Please sign in to buy products');
-      return;
-    }
     if (!selectedSize) {
       alert('Please select a size');
       return;
@@ -102,10 +213,6 @@ export default function ProductDetails({ params }) {
   };
 
   const handleWishlistToggle = async () => {
-    if (!user) {
-      alert('Please sign in to save products');
-      return;
-    }
     try {
       await toggleWishlist(product._id);
     } catch (err) {
@@ -156,28 +263,52 @@ export default function ProductDetails({ params }) {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      {/* Back to Shop Link */}
+      <div className="flex">
+        <Link
+          href="/shop"
+          className="inline-flex items-center space-x-2 text-sm font-semibold text-slate-500 hover:text-brand-teal transition-all hover:-translate-x-1"
+        >
+          <ArrowLeft size={16} />
+          <span>Back to Shop</span>
+        </Link>
+      </div>
+
       {/* Product top row */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
         {/* Left Column: Images */}
         <div className="space-y-4">
-          {/* Main Display Image with Zoom */}
+          {/* Main Display Image with Zoom Lens */}
           <div
+            onClick={() => setIsLightboxOpen(true)}
             onMouseMove={handleZoomMove}
-            onMouseEnter={() => setIsZoomed(true)}
-            onMouseLeave={() => setIsZoomed(false)}
+            onMouseEnter={() => setShowLens(true)}
+            onMouseLeave={() => setShowLens(false)}
             className="relative aspect-[3/4] rounded-3xl overflow-hidden bg-slate-100 dark:bg-slate-900 border border-slate-150 dark:border-slate-800 cursor-zoom-in"
           >
             <Image
               src={activeImage}
               alt={product.name}
               fill
-              className="object-cover object-top transition-transform duration-200"
-              style={{
-                transform: isZoomed ? 'scale(1.3)' : 'scale(1)',
-                transformOrigin: zoomOrigin,
-              }}
+              className="object-cover object-top"
+              priority
             />
+            {showLens && (
+              <div
+                className="absolute rounded-full border-2 border-white shadow-[0_0_15px_rgba(0,0,0,0.4)] pointer-events-none"
+                style={{
+                  width: '180px',
+                  height: '180px',
+                  left: `${lensPos.x - 90}px`,
+                  top: `${lensPos.y - 90}px`,
+                  backgroundImage: `url(${activeImage})`,
+                  backgroundPosition: lensPos.bgPos,
+                  backgroundSize: '300% 300%',
+                  backgroundRepeat: 'no-repeat',
+                }}
+              />
+            )}
           </div>
 
           {/* Thumbnail selectors */}
@@ -376,6 +507,20 @@ export default function ProductDetails({ params }) {
         </div>
       </section>
 
+      {/* Related Products Section */}
+      {relatedProducts.length > 0 && (
+        <section className="space-y-6">
+          <h2 className="text-xl font-bold font-serif text-slate-800 dark:text-slate-100 border-b pb-3 border-slate-100 dark:border-slate-700">
+            You May Also Like
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {relatedProducts.map((prod) => (
+              <ProductCard key={prod._id} product={prod} />
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* Reviews section */}
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
@@ -477,6 +622,121 @@ export default function ProductDetails({ params }) {
           )}
         </div>
       </section>
+
+      {/* Full-Screen Lightbox Image Viewer */}
+      {isLightboxOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-md flex flex-col select-none animate-fade-in">
+          {/* Top Control Bar */}
+          <div className="w-full flex items-center justify-between p-4 md:p-6 bg-gradient-to-b from-black/60 to-transparent">
+            {/* Back Button */}
+            <button
+              onClick={() => {
+                setIsLightboxOpen(false);
+                resetZoom();
+              }}
+              className="flex items-center space-x-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl backdrop-blur-sm transition-all duration-200 hover:-translate-x-1"
+            >
+              <ArrowLeft size={18} />
+              <span className="text-sm font-semibold">Back to Details</span>
+            </button>
+
+            {/* Zoom Controls */}
+            <div className="flex items-center space-x-2 bg-white/10 p-1.5 rounded-xl backdrop-blur-sm">
+              <button
+                onClick={zoomOut}
+                disabled={lightboxZoom <= 1}
+                className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                title="Zoom Out"
+              >
+                <ZoomOut size={18} />
+              </button>
+              <span className="text-xs font-mono font-semibold text-white/80 w-12 text-center">
+                {Math.round(lightboxZoom * 100)}%
+              </span>
+              <button
+                onClick={zoomIn}
+                disabled={lightboxZoom >= 4}
+                className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                title="Zoom In"
+              >
+                <ZoomIn size={18} />
+              </button>
+              <button
+                onClick={resetZoom}
+                className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-colors border-l border-white/15"
+                title="Reset Zoom"
+              >
+                <Maximize2 size={16} />
+              </button>
+            </div>
+          </div>
+
+          {/* Central Image Stage */}
+          <div className="flex-grow relative flex items-center justify-center overflow-hidden px-4">
+            {/* Previous Image Trigger */}
+            {product.images && product.images.indexOf(activeImage) > 0 && (
+              <button
+                onClick={handlePrevImage}
+                className="absolute left-4 z-10 p-3 bg-white/10 hover:bg-white/20 text-white rounded-full backdrop-blur-sm transition-colors hover:scale-105"
+              >
+                <ChevronLeft size={24} />
+              </button>
+            )}
+
+            {/* Main Image Stage */}
+            <div
+              className={`relative max-w-full max-h-[75vh] aspect-[3/4] overflow-hidden rounded-2xl transition-shadow ${
+                lightboxZoom > 1 ? 'cursor-grab active:cursor-grabbing' : ''
+              }`}
+              onMouseDown={handleLightboxMouseDown}
+              onMouseMove={handleLightboxMouseMove}
+              onMouseUp={handleLightboxMouseUp}
+              onMouseLeave={handleLightboxMouseUp}
+              onDoubleClick={handleImageDoubleClick}
+            >
+              <img
+                src={activeImage}
+                alt={product.name}
+                draggable={false}
+                className={`w-full h-full object-contain pointer-events-none select-none transition-transform duration-100 ease-out`}
+                style={{
+                  transform: `scale(${lightboxZoom}) translate(${lightboxPan.x / lightboxZoom}px, ${lightboxPan.y / lightboxZoom}px)`,
+                }}
+              />
+            </div>
+
+            {/* Next Image Trigger */}
+            {product.images && product.images.indexOf(activeImage) < product.images.length - 1 && (
+              <button
+                onClick={handleNextImage}
+                className="absolute right-4 z-10 p-3 bg-white/10 hover:bg-white/20 text-white rounded-full backdrop-blur-sm transition-colors hover:scale-105"
+              >
+                <ChevronRight size={24} />
+              </button>
+            )}
+          </div>
+
+          {/* Thumbnails list at bottom */}
+          {product.images && product.images.length > 1 && (
+            <div className="py-6 bg-gradient-to-t from-black/60 to-transparent flex justify-center space-x-2">
+              {product.images.map((img, i) => (
+                <button
+                  key={i}
+                  onClick={() => {
+                    setActiveImage(img);
+                    resetZoom();
+                  }}
+                  className={`relative w-12 h-16 rounded-md overflow-hidden border-2 transition-all ${
+                    activeImage === img ? 'border-brand-teal scale-105 shadow-md' : 'border-transparent opacity-60 hover:opacity-100'
+                  }`}
+                >
+                  <img src={img} alt="" className="w-full h-full object-cover object-top" />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

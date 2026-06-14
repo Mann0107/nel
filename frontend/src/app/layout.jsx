@@ -9,7 +9,7 @@ import Footer from '../components/Footer';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata = {
-  title: 'Neel India - Premium Online Dress Shop',
+  title: 'Khodal Saree - Premium Online Dress Shop',
   description: 'Buy premium sarees, kurtis, salwar suits, bridal lehengas, and children\'s ethnic apparel online in India. Secure payment, fast delivery, and premium quality.',
 };
 

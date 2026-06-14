@@ -53,7 +53,9 @@ function DashboardContent() {
 
   useEffect(() => {
     if (!user) {
-      router.push('/auth/login');
+      if (activeTab !== 'wishlist') {
+        router.push('/auth/login');
+      }
     } else {
       setName(user.name);
       setEmail(user.email);
@@ -61,7 +63,7 @@ function DashboardContent() {
       loadAddresses();
       loadOrders();
     }
-  }, [user]);
+  }, [user, activeTab]);
 
   // Sync tab with url query parameter
   useEffect(() => {
@@ -188,7 +190,7 @@ function DashboardContent() {
 
   const handleDownloadInvoice = async (orderId, invoiceNo) => {
     try {
-      const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+      const userInfo = JSON.parse(localStorage.getItem('userInfo')) || JSON.parse(localStorage.getItem('adminInfo'));
       const token = userInfo?.token;
       const response = await fetch(`http://localhost:5001/api/orders/${orderId}/invoice`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -215,7 +217,7 @@ function DashboardContent() {
     }
   };
 
-  if (!user) return null;
+  if (!user && activeTab !== 'wishlist') return null;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col md:flex-row gap-8">
@@ -223,54 +225,58 @@ function DashboardContent() {
       <div className="w-full md:w-64 flex-shrink-0 bg-white dark:bg-slate-850 border border-slate-100 dark:border-slate-800 rounded-3xl p-5 shadow-sm h-fit">
         <div className="flex items-center space-x-3 pb-6 border-b border-slate-100 dark:border-slate-700/60 mb-6">
           <div className="w-12 h-12 bg-brand-teal/10 rounded-full flex items-center justify-center text-brand-teal font-bold text-lg shadow-inner">
-            {user.name.charAt(0)}
+            {user ? user.name.charAt(0) : 'G'}
           </div>
           <div>
-            <h3 className="font-bold text-slate-850 dark:text-slate-100 line-clamp-1">{user.name}</h3>
-            <span className="text-[10px] uppercase font-bold tracking-wider text-brand-gold">{user.role}</span>
+            <h3 className="font-bold text-slate-850 dark:text-slate-100 line-clamp-1">{user ? user.name : 'Guest User'}</h3>
+            <span className="text-[10px] uppercase font-bold tracking-wider text-brand-gold">{user ? user.role : 'Guest'}</span>
           </div>
         </div>
 
         <ul className="space-y-2 text-sm font-semibold">
-          <li>
-            <button
-              onClick={() => { setActiveTab('profile'); router.push('/dashboard?tab=profile'); }}
-              className={`flex items-center space-x-3 w-full px-4 py-3 rounded-xl transition-all ${
-                activeTab === 'profile'
-                  ? 'bg-brand-teal text-white shadow'
-                  : 'text-slate-600 dark:text-slate-350 hover:bg-slate-50 dark:hover:bg-slate-800'
-              }`}
-            >
-              <User size={18} />
-              <span>Edit Details</span>
-            </button>
-          </li>
-          <li>
-            <button
-              onClick={() => { setActiveTab('orders'); router.push('/dashboard?tab=orders'); }}
-              className={`flex items-center space-x-3 w-full px-4 py-3 rounded-xl transition-all ${
-                activeTab === 'orders'
-                  ? 'bg-brand-teal text-white shadow'
-                  : 'text-slate-600 dark:text-slate-350 hover:bg-slate-50 dark:hover:bg-slate-800'
-              }`}
-            >
-              <ShoppingBag size={18} />
-              <span>My Orders</span>
-            </button>
-          </li>
-          <li>
-            <button
-              onClick={() => { setActiveTab('addresses'); router.push('/dashboard?tab=addresses'); }}
-              className={`flex items-center space-x-3 w-full px-4 py-3 rounded-xl transition-all ${
-                activeTab === 'addresses'
-                  ? 'bg-brand-teal text-white shadow'
-                  : 'text-slate-600 dark:text-slate-350 hover:bg-slate-50 dark:hover:bg-slate-800'
-              }`}
-            >
-              <MapPin size={18} />
-              <span>Delivery Addresses</span>
-            </button>
-          </li>
+          {user && (
+            <>
+              <li>
+                <button
+                  onClick={() => { setActiveTab('profile'); router.push('/dashboard?tab=profile'); }}
+                  className={`flex items-center space-x-3 w-full px-4 py-3 rounded-xl transition-all ${
+                    activeTab === 'profile'
+                      ? 'bg-brand-teal text-white shadow'
+                      : 'text-slate-600 dark:text-slate-350 hover:bg-slate-50 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <User size={18} />
+                  <span>Edit Details</span>
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => { setActiveTab('orders'); router.push('/dashboard?tab=orders'); }}
+                  className={`flex items-center space-x-3 w-full px-4 py-3 rounded-xl transition-all ${
+                    activeTab === 'orders'
+                      ? 'bg-brand-teal text-white shadow'
+                      : 'text-slate-600 dark:text-slate-350 hover:bg-slate-50 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <ShoppingBag size={18} />
+                  <span>My Orders</span>
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => { setActiveTab('addresses'); router.push('/dashboard?tab=addresses'); }}
+                  className={`flex items-center space-x-3 w-full px-4 py-3 rounded-xl transition-all ${
+                    activeTab === 'addresses'
+                      ? 'bg-brand-teal text-white shadow'
+                      : 'text-slate-600 dark:text-slate-350 hover:bg-slate-50 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <MapPin size={18} />
+                  <span>Delivery Addresses</span>
+                </button>
+              </li>
+            </>
+          )}
           <li>
             <button
               onClick={() => { setActiveTab('wishlist'); router.push('/dashboard?tab=wishlist'); }}
@@ -663,12 +669,21 @@ function DashboardContent() {
                         <h4 className="font-semibold text-xs text-slate-800 dark:text-slate-200 line-clamp-1">{prod.name}</h4>
                         <p className="text-xs text-brand-teal dark:text-brand-teal-light font-bold mt-1">₹{prod.finalPrice}</p>
                       </div>
-                      <Link
-                        href={`/product/${prod._id}`}
-                        className="mt-3 block text-center py-2 bg-brand-teal hover:bg-brand-teal-dark text-white rounded-lg text-[10px] font-bold shadow-sm"
-                      >
-                        Buy Now
-                      </Link>
+                      {user ? (
+                        <Link
+                          href={`/product/${prod._id}`}
+                          className="mt-3 block text-center py-2 bg-brand-teal hover:bg-brand-teal-dark text-white rounded-lg text-[10px] font-bold shadow-sm"
+                        >
+                          Buy Now
+                        </Link>
+                      ) : (
+                        <Link
+                          href={`/auth/login?redirect=product/${prod._id}`}
+                          className="mt-3 block text-center py-2 bg-brand-teal hover:bg-brand-teal-dark text-white rounded-lg text-[10px] font-bold shadow-sm"
+                        >
+                          Login to Buy
+                        </Link>
+                      )}
                     </div>
                   </div>
                 ))}

@@ -38,8 +38,8 @@ const sendNotification = async (userId, title, message, userEmail = null, userMo
     if (userEmail) {
       sendEmail(
         userEmail,
-        `Neel India - ${title}`,
-        `Dear Customer,\n\n${message}\n\nWarm regards,\nTeam Neel India`
+        `Khodal Saree - ${title}`,
+        `Dear Customer,\n\n${message}\n\nWarm regards,\nTeam Khodal Saree`
       );
     }
   } catch (error) {

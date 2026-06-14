@@ -39,23 +39,7 @@ export default function Cart() {
     }
   };
 
-  if (!user) {
-    return (
-      <div className="max-w-7xl mx-auto px-4 py-20 text-center space-y-6">
-        <div className="max-w-md mx-auto p-8 bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-750 shadow-sm space-y-6">
-          <ShoppingBag size={48} className="mx-auto text-slate-300 dark:text-slate-600 animate-bounce" />
-          <h2 className="text-2xl font-bold font-serif text-slate-850 dark:text-slate-100">Sign In to View Cart</h2>
-          <p className="text-sm text-slate-400">Users must register or login before viewing cart or placing orders.</p>
-          <Link
-            href="/auth/login"
-            className="block w-full py-3.5 bg-brand-teal text-white font-semibold rounded-xl text-sm shadow hover:bg-brand-teal-dark transition-colors"
-          >
-            Go to Login
-          </Link>
-        </div>
-      </div>
-    );
-  }
+
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -190,12 +174,21 @@ export default function Cart() {
                 </div>
               </div>
 
-              <Link
-                href="/checkout"
-                className="w-full block py-4 text-center bg-brand-saffron hover:bg-brand-saffron-dark text-white rounded-xl font-semibold text-sm shadow hover:shadow-md transition-all hover:scale-[1.01]"
-              >
-                Proceed to Checkout
-              </Link>
+              {user ? (
+                <Link
+                  href="/checkout"
+                  className="w-full block py-4 text-center bg-brand-saffron hover:bg-brand-saffron-dark text-white rounded-xl font-semibold text-sm shadow hover:shadow-md transition-all hover:scale-[1.01]"
+                >
+                  Proceed to Checkout
+                </Link>
+              ) : (
+                <Link
+                  href="/auth/login?redirect=checkout"
+                  className="w-full block py-4 text-center bg-brand-saffron hover:bg-brand-saffron-dark text-white rounded-xl font-semibold text-sm shadow hover:shadow-md transition-all hover:scale-[1.01]"
+                >
+                  Login to Checkout & Buy
+                </Link>
+              )}
             </div>
 
             {/* Trust Badges */}

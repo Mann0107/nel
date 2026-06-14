@@ -62,7 +62,7 @@ app.use('/uploads', express.static(uploadsFolder));
 
 // Root route
 app.get('/', (req, res) => {
-  res.json({ message: 'Neel India Backend API is running...' });
+  res.json({ message: 'Khodal Saree Backend API is running...' });
 });
 
 // Error handling middleware

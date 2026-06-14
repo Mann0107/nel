@@ -9,11 +9,11 @@ const generateInvoicePDF = (order, stream) => {
   doc
     .fillColor('#0D5C75') // Deep Teal
     .fontSize(24)
-    .text('Neel India', 50, 45)
+    .text('Khodal Saree', 50, 45)
     .fillColor('#333333')
     .fontSize(10)
     .text('Premium Dresses & Traditional Wear', 50, 75)
-    .text('Email: support@neel.in | Web: www.neel.in', 50, 90)
+    .text('Email: support@khodalsaree.com | Web: www.khodalsaree.com', 50, 90)
     .moveDown();
 
   // Invoice Title & Info
@@ -21,10 +21,11 @@ const generateInvoicePDF = (order, stream) => {
     .fontSize(20)
     .text('TAX INVOICE', 350, 45, { align: 'right' })
     .fontSize(10)
-    .text(`Invoice No: ${order.invoiceNumber || 'N/A'}`, 350, 70, { align: 'right' })
-    .text(`Order Date: ${new Date(order.createdAt).toLocaleDateString('en-IN')}`, 350, 85, { align: 'right' })
-    .text(`Order ID: ${order.orderId}`, 350, 100, { align: 'right' })
-    .text(`Payment ID: ${order.paymentId}`, 350, 115, { align: 'right' });
+    .text(`Invoice No: ${order.invoiceNumber || 'N/A'}`, 350, 65, { align: 'right' })
+    .text(`Order Date: ${new Date(order.createdAt).toLocaleDateString('en-IN')}`, 350, 78, { align: 'right' })
+    .text(`Order ID: ${order.orderId}`, 350, 91, { align: 'right' })
+    .text(`Payment Method: ${order.paymentMethod || 'Razorpay'}`, 350, 104, { align: 'right' })
+    .text(`Payment ID: ${order.paymentId}`, 350, 117, { align: 'right' });
 
   // Divider Line
   doc.moveTo(50, 135).lineTo(550, 135).strokeColor('#dddddd').stroke();
@@ -110,7 +111,7 @@ const generateInvoicePDF = (order, stream) => {
     .fontSize(10)
     .fillColor('#888888')
     .text('This is a computer-generated invoice. No signature is required.', 50, 700, { align: 'center' })
-    .text('Thank you for shopping with Neel India!', 50, 715, { align: 'center' });
+    .text('Thank you for shopping with Khodal Saree!', 50, 715, { align: 'center' });
 
   doc.end();
 };

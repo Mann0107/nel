@@ -63,11 +63,23 @@ const createProduct = async (req, res) => {
       return res.status(400).json({ message: 'Product code already exists' });
     }
 
+    if (category) {
+      const categoryExists = await Category.findOne({ name: { $regex: new RegExp(`^${category.trim()}$`, 'i') } });
+      if (!categoryExists) {
+        const slug = category.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+        await Category.create({
+          name: category.trim(),
+          slug,
+          image: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?w=500',
+        });
+      }
+    }
+
     const product = new Product({
       name,
       code,
       brand,
-      category,
+      category: category ? category.trim() : category,
       originalPrice,
       discountPercentage: discountPercentage || 0,
       description,
@@ -103,9 +115,21 @@ const updateProduct = async (req, res) => {
     const product = await Product.findById(req.params.id);
 
     if (product) {
+      if (category) {
+        const categoryExists = await Category.findOne({ name: { $regex: new RegExp(`^${category.trim()}$`, 'i') } });
+        if (!categoryExists) {
+          const slug = category.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+          await Category.create({
+            name: category.trim(),
+            slug,
+            image: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?w=500',
+          });
+        }
+      }
+
       product.name = name || product.name;
       product.brand = brand || product.brand;
-      product.category = category || product.category;
+      product.category = category ? category.trim() : product.category;
       product.originalPrice = originalPrice !== undefined ? originalPrice : product.originalPrice;
       product.discountPercentage = discountPercentage !== undefined ? discountPercentage : product.discountPercentage;
       product.description = description || product.description;
@@ -168,7 +192,20 @@ const updateOrderStatus = async (req, res) => {
       return res.status(404).json({ message: 'Order not found' });
     }
 
-    order.status = status || order.status;
+    const previousStatus = order.status;
+    const targetStatus = status || order.status;
+
+    if (targetStatus === 'Cancelled' && previousStatus !== 'Cancelled') {
+      for (const item of order.items) {
+        const product = await Product.findById(item.product);
+        if (product) {
+          product.stock += item.quantity;
+          await product.save();
+        }
+      }
+    }
+
+    order.status = targetStatus;
     if (courierPartner) order.courierPartner = courierPartner;
     if (trackingId) order.trackingId = trackingId;
     if (expectedDeliveryDate) order.expectedDeliveryDate = new Date(expectedDeliveryDate);

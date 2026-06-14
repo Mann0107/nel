@@ -2,13 +2,14 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Eye, EyeOff, Lock, User, AlertCircle, Sparkles } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import { api } from '../../../utils/api';
 
 export default function Login() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, login, loading: authLoading } = useAuth();
   
   const [loginId, setLoginId] = useState('');
@@ -31,13 +32,16 @@ export default function Login() {
   // Redirect if logged in
   useEffect(() => {
     if (user) {
-      if (user.role === 'admin') {
+      const redirect = searchParams.get('redirect');
+      if (redirect) {
+        router.push(redirect.startsWith('/') ? redirect : `/${redirect}`);
+      } else if (user.role === 'admin') {
         router.push('/admin');
       } else {
         router.push('/dashboard');
       }
     }
-  }, [user, router]);
+  }, [user, router, searchParams]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -122,7 +126,7 @@ export default function Login() {
             Sign In
           </h2>
           <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-            Welcome back to Neel India
+            Welcome back to Khodal Saree
           </p>
         </div>
 

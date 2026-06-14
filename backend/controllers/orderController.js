@@ -202,6 +202,8 @@ const verifyPayment = async (req, res) => {
     razorpay_signature,
     addressId,
     orderId, // internally passed if mock
+    paymentMethod, // added!
+    paymentId, // user-supplied transaction reference ID
   } = req.body;
 
   try {
@@ -209,10 +211,25 @@ const verifyPayment = async (req, res) => {
       return res.status(400).json({ message: 'Address ID is required' });
     }
 
+    const isCOD = paymentMethod === 'COD';
+    const isOnlineManual = paymentMethod === 'Online';
+
     // Verify payment authenticity
-    const activeOrderId = razorpay_order_id || orderId;
+    let activeOrderId = '';
+    let finalPaymentId = '';
+
+    if (isCOD) {
+      activeOrderId = `cod_${crypto.randomBytes(8).toString('hex')}`;
+      finalPaymentId = `cod_pay_${crypto.randomBytes(8).toString('hex')}`;
+    } else if (isOnlineManual) {
+      activeOrderId = `upi_${crypto.randomBytes(8).toString('hex')}`;
+      finalPaymentId = paymentId || `upi_pay_${crypto.randomBytes(8).toString('hex')}`;
+    } else {
+      activeOrderId = razorpay_order_id || orderId;
+      finalPaymentId = razorpay_payment_id || `mock_payment_${crypto.randomBytes(8).toString('hex')}`;
+    }
     
-    if (razorpay && !activeOrderId.startsWith('mock_')) {
+    if (!isCOD && !isOnlineManual && razorpay && !activeOrderId.startsWith('mock_')) {
       if (!razorpay_payment_id || !razorpay_signature) {
         return res.status(400).json({ message: 'Payment gateway parameters are missing' });
       }
@@ -270,7 +287,7 @@ const verifyPayment = async (req, res) => {
     }
 
     const gst = Math.round(subtotal * 0.18);
-    const shippingCharge = pinRecord.deliveryCharge;
+    const shippingCharge = isCOD ? (pinRecord.deliveryCharge + 10) : pinRecord.deliveryCharge;
     const grandTotal = subtotal + gst + shippingCharge;
 
     // Generate Invoice Number: NL-YYYYMMDD-XXXX
@@ -301,7 +318,8 @@ const verifyPayment = async (req, res) => {
         pincode: address.pincode,
         landmark: address.landmark,
       },
-      paymentId: razorpay_payment_id || `mock_payment_${crypto.randomBytes(8).toString('hex')}`,
+      paymentId: finalPaymentId,
+      paymentMethod: isCOD ? 'COD' : (isOnlineManual ? 'Online' : 'Razorpay'),
       status: 'Placed',
       expectedDeliveryDate: new Date(Date.now() + pinRecord.estDays * 24 * 60 * 60 * 1000),
     });

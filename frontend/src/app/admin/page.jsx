@@ -22,6 +22,10 @@ export default function AdminDashboard() {
   const [showProductModal, setShowProductModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null); // null means adding
 
+  // Product categories state
+  const [categoriesList, setCategoriesList] = useState([]);
+  const [customCategory, setCustomCategory] = useState('');
+
   // Product form fields
   const [prodName, setProdName] = useState('');
   const [prodCode, setProdCode] = useState('');
@@ -77,6 +81,7 @@ export default function AdminDashboard() {
       loadOrders();
       loadPincodes();
       loadCustomers();
+      loadCategories();
     }
   }, [user]);
 
@@ -126,6 +131,15 @@ export default function AdminDashboard() {
     }
   };
 
+  const loadCategories = async () => {
+    try {
+      const data = await api.get('/products/categories');
+      setCategoriesList(data || []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -158,7 +172,8 @@ export default function AdminDashboard() {
     setProdName('');
     setProdCode('');
     setProdBrand('');
-    setProdCategory('Saree');
+    setProdCategory(categoriesList[0]?.name || 'Saree');
+    setCustomCategory('');
     setProdOrigPrice('');
     setProdDiscount('0');
     setProdStock('');
@@ -186,7 +201,16 @@ export default function AdminDashboard() {
     setProdName(prod.name);
     setProdCode(prod.code);
     setProdBrand(prod.brand);
-    setProdCategory(prod.category);
+    
+    const isStandard = categoriesList.some((c) => c.name === prod.category);
+    if (isStandard || !prod.category) {
+      setProdCategory(prod.category || 'Saree');
+      setCustomCategory('');
+    } else {
+      setProdCategory('Other');
+      setCustomCategory(prod.category);
+    }
+    
     setProdOrigPrice(prod.originalPrice);
     setProdDiscount(prod.discountPercentage);
     setProdStock(prod.stock);
@@ -214,11 +238,17 @@ export default function AdminDashboard() {
     e.preventDefault();
     setError('');
     
+    const targetCategory = prodCategory === 'Other' ? customCategory : prodCategory;
+    if (!targetCategory || targetCategory.trim() === '') {
+      setError('Please specify a category name');
+      return;
+    }
+
     const prodData = {
       name: prodName,
       code: prodCode,
       brand: prodBrand,
-      category: prodCategory,
+      category: targetCategory.trim(),
       originalPrice: Number(prodOrigPrice),
       discountPercentage: Number(prodDiscount),
       stock: Number(prodStock),
@@ -250,6 +280,7 @@ export default function AdminDashboard() {
       setShowProductModal(false);
       loadProducts();
       loadStats();
+      loadCategories();
     } catch (err) {
       setError(err.message || 'Failed to save product');
     }
@@ -282,6 +313,20 @@ export default function AdminDashboard() {
       alert('Order status updated!');
     } catch (err) {
       alert(err.message || 'Failed to update order');
+    }
+  };
+
+  // Quick Order status update (Accept/Cancel)
+  const handleQuickStatusUpdate = async (orderId, targetStatus) => {
+    try {
+      await api.put(`/admin/orders/${orderId}/status`, {
+        status: targetStatus,
+      });
+      loadOrders();
+      loadStats();
+      alert(`Order status updated to ${targetStatus}!`);
+    } catch (err) {
+      alert(err.message || 'Failed to update order status');
     }
   };
 
@@ -459,7 +504,7 @@ export default function AdminDashboard() {
                       <tr key={ord._id} className="hover:bg-slate-50/50">
                         <td className="p-3 font-semibold text-brand-teal">{ord.invoiceNumber}</td>
                         <td className="p-3">{ord.user?.name || 'Guest'}</td>
-                        <td className="p-3 font-bold">₹{ord.grandTotal}</td>
+                        <td className="p-3 font-bold">₹{ord.grandTotal} <span className="text-[9px] text-slate-450 dark:text-slate-400 font-normal">({ord.paymentMethod || 'Razorpay'})</span></td>
                         <td className="p-3 uppercase font-bold text-brand-gold">{ord.status}</td>
                         <td className="p-3 text-slate-400">{new Date(ord.createdAt).toLocaleDateString()}</td>
                       </tr>
@@ -551,13 +596,41 @@ export default function AdminDashboard() {
                     <div>
                       <div className="flex items-center space-x-2">
                         <span className="font-bold text-sm text-slate-850 dark:text-slate-100">Order #{ord.invoiceNumber}</span>
-                        <span className="text-[9px] bg-brand-gold/15 text-brand-gold-dark px-1.5 py-0.5 rounded font-extrabold uppercase">{ord.status}</span>
+                        <span className={`text-[9px] px-1.5 py-0.5 rounded font-extrabold uppercase ${
+                          ord.status === 'Cancelled'
+                            ? 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400'
+                            : ord.status === 'Delivered' || ord.status === 'Accepted'
+                            ? 'bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400'
+                            : 'bg-brand-gold/15 text-brand-gold-dark'
+                        }`}>
+                          {ord.status}
+                        </span>
                       </div>
-                      <p className="text-[11px] text-slate-400 mt-1">Customer: {ord.user?.name || 'Unregistered'} | Mobile: {ord.user?.mobile || 'N/A'}</p>
+                      <p className="text-[11px] text-slate-400 mt-1">Customer: {ord.user?.name || 'Unregistered'} | Mobile: {ord.user?.mobile || 'N/A'} | Payment: {ord.paymentMethod || 'Razorpay'} | Total: ₹{ord.grandTotal}</p>
                       <p className="text-xs text-slate-500 font-semibold mt-1">Items: {ord.items.map((i) => `${i.name} (${i.size} x${i.quantity})`).join(', ')}</p>
                       <p className="text-xs text-slate-500">Destination: {ord.shippingAddress?.city}, {ord.shippingAddress?.pincode}</p>
                     </div>
-                    <div>
+                    <div className="flex flex-wrap gap-2">
+                      {(ord.status === 'Placed' || ord.status === 'Confirmed') && (
+                        <button
+                          onClick={() => handleQuickStatusUpdate(ord._id, 'Accepted')}
+                          className="py-2 px-3.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors"
+                        >
+                          Accept Order
+                        </button>
+                      )}
+                      {ord.status !== 'Cancelled' && ord.status !== 'Delivered' && (
+                        <button
+                          onClick={() => {
+                            if (confirm('Are you sure you want to cancel this order?')) {
+                              handleQuickStatusUpdate(ord._id, 'Cancelled');
+                            }
+                          }}
+                          className="py-2 px-3.5 bg-red-650 hover:bg-red-750 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors"
+                        >
+                          Cancel Order
+                        </button>
+                      )}
                       <button
                         onClick={() => {
                           setSelectedOrder(ord);
@@ -566,9 +639,9 @@ export default function AdminDashboard() {
                           setTrackId(ord.trackingId || '');
                           setEstDelivery(ord.expectedDeliveryDate ? new Date(ord.expectedDeliveryDate).toISOString().slice(0, 10) : '');
                         }}
-                        className="py-2 px-4 bg-brand-teal hover:bg-brand-teal-dark text-white rounded-lg text-xs font-semibold shadow-sm"
+                        className="py-2 px-3.5 bg-brand-teal hover:bg-brand-teal-dark text-white rounded-lg text-xs font-semibold shadow-sm transition-colors"
                       >
-                        Update Dispatch
+                        Update Details
                       </button>
                     </div>
                   </div>
@@ -597,6 +670,7 @@ export default function AdminDashboard() {
                       <option value="InTransit">In Transit</option>
                       <option value="OutForDelivery">Out For Delivery</option>
                       <option value="Delivered">Delivered</option>
+                      <option value="Cancelled">Cancelled</option>
                     </select>
                   </div>
 
@@ -665,39 +739,51 @@ export default function AdminDashboard() {
             <form onSubmit={handleAddPincode} className="p-5 bg-slate-50 dark:bg-slate-900 border rounded-2xl space-y-4 max-w-lg shadow-sm">
               <h3 className="font-bold text-sm text-slate-705 dark:text-slate-200">Configure Pincode</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <input
-                  type="text"
-                  required
-                  maxLength={6}
-                  placeholder="6-Digit Pincode (e.g., 360001)"
-                  value={pinInput}
-                  onChange={(e) => setPinInput(e.target.value)}
-                  className="rounded-lg p-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-100"
-                />
-                <input
-                  type="number"
-                  required
-                  placeholder="Delivery Charge (₹)"
-                  value={pinCharge}
-                  onChange={(e) => setPinCharge(e.target.value)}
-                  className="rounded-lg p-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-100"
-                />
-                <input
-                  type="number"
-                  required
-                  placeholder="Estimated Days (e.g. 5)"
-                  value={pinDays}
-                  onChange={(e) => setPinDays(e.target.value)}
-                  className="rounded-lg p-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-800"
-                />
-                <select
-                  value={pinServiceable}
-                  onChange={(e) => setPinServiceable(e.target.value === 'true')}
-                  className="rounded-lg p-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-800"
-                >
-                  <option value="true">Serviceable (Delivery Available)</option>
-                  <option value="false">Unserviceable (Delivery Blocked)</option>
-                </select>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-450 uppercase mb-1">Pincode (6 Digits)</label>
+                  <input
+                    type="text"
+                    required
+                    maxLength={6}
+                    placeholder="e.g., 360001"
+                    value={pinInput}
+                    onChange={(e) => setPinInput(e.target.value)}
+                    className="w-full rounded-lg p-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-100 focus:ring-1 focus:ring-brand-teal focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-450 uppercase mb-1">Delivery Charge (₹)</label>
+                  <input
+                    type="number"
+                    required
+                    placeholder="Delivery Charge (₹)"
+                    value={pinCharge}
+                    onChange={(e) => setPinCharge(e.target.value)}
+                    className="w-full rounded-lg p-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-100 focus:ring-1 focus:ring-brand-teal focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-450 uppercase mb-1">Estimated Days</label>
+                  <input
+                    type="number"
+                    required
+                    placeholder="Estimated Days (e.g. 5)"
+                    value={pinDays}
+                    onChange={(e) => setPinDays(e.target.value)}
+                    className="w-full rounded-lg p-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-850 focus:ring-1 focus:ring-brand-teal focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-450 uppercase mb-1">Delivery Status</label>
+                  <select
+                    value={pinServiceable}
+                    onChange={(e) => setPinServiceable(e.target.value === 'true')}
+                    className="w-full rounded-lg p-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-800 focus:ring-1 focus:ring-brand-teal focus:outline-none"
+                  >
+                    <option value="true">Serviceable (Delivery Available)</option>
+                    <option value="false">Unserviceable (Delivery Blocked)</option>
+                  </select>
+                </div>
               </div>
               <button
                 type="submit"
@@ -718,9 +804,16 @@ export default function AdminDashboard() {
                   >
                     <div>
                       <p className="font-bold text-sm text-slate-800 dark:text-slate-150">{pin.pincode}</p>
-                      <p className="text-[10px] text-slate-400">Charge: ₹{pin.deliveryCharge} | Days: {pin.estDays}</p>
-                      <p className={`text-[9px] font-bold ${pin.serviceable ? 'text-green-600' : 'text-red-500'}`}>
-                        {pin.serviceable ? 'SERVICEABLE' : 'BLOCKED'}
+                      <div className="flex flex-wrap gap-1 mt-1 mb-1">
+                        <span className="inline-flex items-center text-[9px] bg-teal-50 dark:bg-teal-950/40 text-teal-650 dark:text-teal-400 px-1.5 py-0.5 rounded font-bold">
+                          Charge: ₹{pin.deliveryCharge}
+                        </span>
+                        <span className="inline-flex items-center text-[9px] bg-indigo-50 dark:bg-indigo-950/40 text-indigo-650 dark:text-indigo-400 px-1.5 py-0.5 rounded font-bold">
+                          Days: {pin.estDays}
+                        </span>
+                      </div>
+                      <p className={`text-[9px] font-extrabold ${pin.serviceable ? 'text-green-600' : 'text-red-550'}`}>
+                        {pin.serviceable ? '● SERVICEABLE' : '○ BLOCKED'}
                       </p>
                     </div>
                     <button
@@ -854,18 +947,29 @@ export default function AdminDashboard() {
                   <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Category</label>
                   <select
                     value={prodCategory}
-                    onChange={(e) => setProdCategory(e.target.value)}
+                    onChange={(e) => {
+                      setProdCategory(e.target.value);
+                      if (e.target.value !== 'Other') {
+                        setCustomCategory('');
+                      }
+                    }}
                     className="w-full bg-slate-50 dark:bg-slate-900 border text-sm py-2 px-3 rounded-lg focus:ring-1 focus:ring-brand-teal"
                   >
-                    <option value="Saree">Saree</option>
-                    <option value="Kurti">Kurti</option>
-                    <option value="Salwar Suit">Salwar Suit</option>
-                    <option value="Lehenga">Lehenga</option>
-                    <option value="Western Dress">Western Dress</option>
-                    <option value="Party Wear">Party Wear</option>
-                    <option value="Men's Wear">Men's Wear</option>
-                    <option value="Kids Wear">Kids Wear</option>
+                    {categoriesList.map((cat) => (
+                      <option key={cat._id || cat.name} value={cat.name}>{cat.name}</option>
+                    ))}
+                    <option value="Other">Other / Add New Category...</option>
                   </select>
+                  {prodCategory === 'Other' && (
+                    <input
+                      type="text"
+                      required
+                      placeholder="Enter new category name"
+                      value={customCategory}
+                      onChange={(e) => setCustomCategory(e.target.value)}
+                      className="mt-2 w-full bg-slate-50 dark:bg-slate-900 border text-sm py-2 px-3 rounded-lg focus:ring-1 focus:ring-brand-teal"
+                    />
+                  )}
                 </div>
                 
                 {/* Pricing & Stock */}

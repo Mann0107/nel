@@ -28,7 +28,7 @@ export default function OrderTracking({ params }) {
 
   const handleDownloadInvoice = async () => {
     try {
-      const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+      const userInfo = JSON.parse(localStorage.getItem('userInfo')) || JSON.parse(localStorage.getItem('adminInfo'));
       const token = userInfo?.token;
       
       const response = await fetch(`http://localhost:5001/api/orders/${orderId}/invoice`, {
@@ -135,13 +135,21 @@ export default function OrderTracking({ params }) {
         )}
 
         {/* Addresses & Estimates grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-4">
           <div className="space-y-2">
             <h4 className="font-bold text-xs uppercase text-slate-450 tracking-wider">Expected Delivery</h4>
             <div className="flex items-center space-x-2 text-sm text-slate-650 dark:text-slate-300">
               <Calendar size={16} className="text-brand-teal" />
               <span className="font-semibold">{new Date(order.expectedDeliveryDate).toDateString()}</span>
             </div>
+          </div>
+          
+          <div className="space-y-2">
+            <h4 className="font-bold text-xs uppercase text-slate-450 tracking-wider">Payment Method</h4>
+            <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+              {order.paymentMethod === 'COD' ? 'Cash on Delivery (COD)' : 'Online Payment (Razorpay)'}
+            </p>
+            <p className="text-xs text-slate-400 mt-1">Payment ID: {order.paymentId}</p>
           </div>
           
           <div className="space-y-2">
@@ -184,7 +192,7 @@ export default function OrderTracking({ params }) {
             <span className="font-semibold text-slate-700 dark:text-slate-200">₹{order.shippingCharge}</span>
           </div>
           <div className="flex justify-between w-64 font-bold text-slate-800 dark:text-slate-100 border-t pt-2 mt-2">
-            <span>Amount Paid:</span>
+            <span>{order.paymentMethod === 'COD' ? 'Amount to Pay (COD):' : 'Amount Paid:'}</span>
             <span className="text-lg font-extrabold text-brand-teal">₹{order.grandTotal}</span>
           </div>
         </div>

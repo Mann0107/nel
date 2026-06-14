@@ -58,7 +58,7 @@ const request = (method, path, body = null, token = null) => {
 };
 
 const runTests = async () => {
-  console.log('=== STARTING NEEL INDIA API INTEGRATION TESTS ===\n');
+  console.log('=== STARTING KHODAL SAREE API INTEGRATION TESTS ===\n');
   
   let userToken = '';
   let adminToken = '';
@@ -220,6 +220,143 @@ const runTests = async () => {
       console.log(`  [PASS] Stats fetched. Total Sales: Rs. ${statsRes.data.totalSales}, Total Orders: ${statsRes.data.totalOrders}`);
     } else {
       console.log('  [FAIL] Failed to fetch admin stats:', statsRes.data.message);
+    }
+
+    // 13. Test COD: Add product to cart and verify payment with COD
+    console.log('\nTest 13: Verifying Cash on Delivery (COD) Checkout...');
+    
+    // Add product to cart again
+    const addToCartCodRes = await request('POST', '/api/cart/add', {
+      productId: testProductId,
+      size: 'M',
+      quantity: 1,
+    }, userToken);
+
+    if (addToCartCodRes.statusCode === 200) {
+      console.log('  [PASS] Added product to cart for COD test.');
+    } else {
+      console.log('  [FAIL] Failed to add product to cart for COD:', addToCartCodRes.data.message);
+    }
+
+    // Verify COD payment
+    const verifyCodRes = await request('POST', '/api/orders/verify-payment', {
+      addressId,
+      paymentMethod: 'COD',
+    }, userToken);
+
+    if (verifyCodRes.statusCode === 201) {
+      const codOrder = verifyCodRes.data;
+      console.log(`  [PASS] COD Order placed successfully! Invoice No: ${codOrder.invoiceNumber}`);
+      
+      // Assert paymentMethod is 'COD'
+      if (codOrder.paymentMethod === 'COD') {
+        console.log('  [PASS] Order payment method is correctly saved as COD.');
+      } else {
+        console.log(`  [FAIL] Order payment method is expected to be 'COD' but got: ${codOrder.paymentMethod}`);
+      }
+
+      // Assert shippingCharge is +10 extra (40 + 10 = 50)
+      if (codOrder.shippingCharge === 50) {
+        console.log('  [PASS] Shipping charge has ₹10 COD fee added (Rs. 50 instead of Rs. 40).');
+      } else {
+        console.log(`  [FAIL] Expected shipping charge to be 50 but got: ${codOrder.shippingCharge}`);
+      }
+
+      // Check grand total
+      const expectedGrandTotal = codOrder.subtotal + codOrder.gst + 50;
+      if (codOrder.grandTotal === expectedGrandTotal) {
+        console.log(`  [PASS] Grand total is correct (Rs. ${codOrder.grandTotal}).`);
+      } else {
+        console.log(`  [FAIL] Grand total is incorrect. Expected ${expectedGrandTotal} but got ${codOrder.grandTotal}`);
+      }
+    } else {
+      console.log('  [FAIL] COD Order placement failed:', verifyCodRes.data.message);
+    }
+
+    // 14. Test Order Cancellation & Restocking
+    console.log('\nTest 14: Verifying Order Cancellation & Inventory Restocking (Admin)...');
+    
+    if (verifyCodRes.statusCode === 201) {
+      // First, let's fetch the product to check current stock
+      const productBeforeRes = await request('GET', `/api/products`);
+      const productBefore = productBeforeRes.data.products.find(p => p._id === testProductId);
+      const stockBefore = productBefore.stock;
+
+      // Call update status to Cancelled
+      const cancelRes = await request('PUT', `/api/admin/orders/${verifyCodRes.data._id}/status`, {
+        status: 'Cancelled',
+      }, adminToken);
+
+      if (cancelRes.statusCode === 200 && cancelRes.data.status === 'Cancelled') {
+        console.log('  [PASS] Order successfully cancelled by admin.');
+
+        // Check product stock again
+        const productAfterRes = await request('GET', `/api/products`);
+        const productAfter = productAfterRes.data.products.find(p => p._id === testProductId);
+        const stockAfter = productAfter.stock;
+
+        // We added 1 item in Test 13. So stockAfter should be stockBefore + 1
+        if (stockAfter === stockBefore + 1) {
+          console.log('  [PASS] Inventory restocked successfully (+1 item).');
+        } else {
+          console.log(`  [FAIL] Restocking failed. Expected ${stockBefore + 1} but got ${stockAfter}`);
+        }
+      } else {
+        console.log('  [FAIL] Order cancellation failed:', cancelRes.data.message);
+      }
+    } else {
+      console.log('  [SKIP] Skipping Test 14 since COD Order placement failed.');
+    }
+
+    // 15. Test Manual Online Payment (UPI / Bank Transfer)
+    console.log('\nTest 15: Verifying Manual Online Payment (UPI/Bank Transfer) Checkout...');
+    
+    // Add product to cart again
+    const addToCartOnlineRes = await request('POST', '/api/cart/add', {
+      productId: testProductId,
+      size: 'S',
+      quantity: 1,
+    }, userToken);
+
+    if (addToCartOnlineRes.statusCode === 200) {
+      console.log('  [PASS] Added product to cart for Manual Online test.');
+    } else {
+      console.log('  [FAIL] Failed to add product to cart for Manual Online:', addToCartOnlineRes.data.message);
+    }
+
+    // Verify manual online payment with a transaction ID
+    const verifyOnlineRes = await request('POST', '/api/orders/verify-payment', {
+      addressId,
+      paymentMethod: 'Online',
+      paymentId: 'TXN123456789012', // UPI transaction reference UTR
+    }, userToken);
+
+    if (verifyOnlineRes.statusCode === 201) {
+      const onlineOrder = verifyOnlineRes.data;
+      console.log(`  [PASS] Manual Online Order placed successfully! Invoice No: ${onlineOrder.invoiceNumber}`);
+      
+      // Assert paymentMethod is 'Online'
+      if (onlineOrder.paymentMethod === 'Online') {
+        console.log('  [PASS] Order payment method is correctly saved as Online.');
+      } else {
+        console.log(`  [FAIL] Order payment method is expected to be 'Online' but got: ${onlineOrder.paymentMethod}`);
+      }
+
+      // Assert paymentId is saved as custom transaction reference ID
+      if (onlineOrder.paymentId === 'TXN123456789012') {
+        console.log('  [PASS] Order payment ID is correctly saved as the user transaction ID.');
+      } else {
+        console.log(`  [FAIL] Expected payment ID to be 'TXN123456789012' but got: ${onlineOrder.paymentId}`);
+      }
+
+      // Assert shippingCharge has NO extra COD fee (should be Rs. 40)
+      if (onlineOrder.shippingCharge === 40) {
+        console.log('  [PASS] Shipping charge has no COD fee added (Rs. 40).');
+      } else {
+        console.log(`  [FAIL] Expected shipping charge to be 40 but got: ${onlineOrder.shippingCharge}`);
+      }
+    } else {
+      console.log('  [FAIL] Manual Online Order placement failed:', verifyOnlineRes.data.message);
     }
 
     console.log('\n=== ALL TESTS EXECUTED COMPLETED ===');

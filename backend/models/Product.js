@@ -21,16 +21,6 @@ const productSchema = new mongoose.Schema(
     category: {
       type: String,
       required: [true, 'Category is required'],
-      enum: [
-        'Saree',
-        'Kurti',
-        'Salwar Suit',
-        'Lehenga',
-        'Western Dress',
-        'Party Wear',
-        'Men\'s Wear',
-        'Kids Wear',
-      ],
     },
     originalPrice: {
       type: Number,

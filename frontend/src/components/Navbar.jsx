@@ -28,10 +28,10 @@ export default function Navbar() {
           <div className="flex-shrink-0 flex items-center">
             <Link href="/" className="flex items-center space-x-2">
               <span className="text-2xl font-bold bg-gradient-to-r from-brand-teal to-brand-saffron bg-clip-text text-transparent font-serif">
-                Neel
+                Khodal
               </span>
               <span className="text-xs uppercase bg-brand-gold text-brand-teal-dark px-1.5 py-0.5 rounded font-bold tracking-wider font-sans">
-                India
+                Saree
               </span>
             </Link>
           </div>

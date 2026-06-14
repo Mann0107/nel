@@ -2,12 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Eye, EyeOff, Lock, User, Mail, Phone, AlertCircle, Sparkles } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 
 export default function Register() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, register, loading: authLoading } = useAuth();
 
   const [name, setName] = useState('');
@@ -24,9 +25,14 @@ export default function Register() {
   // Redirect if logged in
   useEffect(() => {
     if (user) {
-      router.push('/dashboard');
+      const redirect = searchParams.get('redirect');
+      if (redirect) {
+        router.push(redirect.startsWith('/') ? redirect : `/${redirect}`);
+      } else {
+        router.push('/dashboard');
+      }
     }
-  }, [user, router]);
+  }, [user, router, searchParams]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -76,7 +82,7 @@ export default function Register() {
             Create Account
           </h2>
           <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-            Join Neel India and start shopping
+            Join Khodal Saree and start shopping
           </p>
         </div>
 
